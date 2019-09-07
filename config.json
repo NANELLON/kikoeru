@@ -1,5 +1,6 @@
 {
-  "rootDir": "/mnt/Media/Voice",
+  "rootDir": ["/mnt/Media/Voice", "/mnt/Storage/Voice"],
+  "imageDir": "/mnt/Media/Images",
   "password": false,
   "scannerMaxRecursionDepth": 2,
   "worksPerPage": 12

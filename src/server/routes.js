@@ -1,5 +1,6 @@
 const path = require('path');
 const express = require('express');
+const fs = require('fs')
 
 const db = require('./database/db');
 const { getTrackList } = require('./filesystem/utils');
@@ -11,7 +12,8 @@ const router = express.Router();
 // GET work cover image
 router.get('/cover/:id', (req, res, next) => {
   const rjcode = (`000000${req.params.id}`).slice(-6);
-  res.sendFile(path.join(config.rootDir, 'Images', `RJ${rjcode}.jpg`), (err) => {
+  
+  res.sendFile(path.join(config.imageDir, `RJ${rjcode}.jpg`), (err) => {
     if (err) {
       res.sendFile(path.join(__dirname, '..', '..', 'static', 'no-image.jpg'), (err2) => {
         if (err2) {
@@ -52,7 +54,14 @@ router.get('/stream/:id/:index', (req, res, next) => {
       getTrackList(req.params.id, dir.dir)
         .then((tracks) => {
           const track = tracks[req.params.index];
-          res.sendFile(path.join(config.rootDir, dir.dir, track.subtitle || '', track.title));
+          let path;
+          for(const rootDir in config.rootDir) {
+            path = fs.exists(path.join(rootDir, dir.dir, track.subtitle || '', track.title));
+            if(fs.exists(path)) {
+              break;
+            }
+          }
+          res.sendFile(path);
         })
         .catch(err => next(err));
     });

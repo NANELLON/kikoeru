@@ -11,9 +11,10 @@ const config = require('../../../config.json');
  * @param {Number} id Work identifier. Currently, RJ/RE code.
  * @param {String} dir Work directory (relative).
  */
-const getTrackList = (id, dir) => recursiveReaddir(
-  path.join(config.rootDir, dir),
-)
+const getTrackList = (id, dir) => config.rootDir.reduce(
+    (rootDir, tracks) => tracks.push(recursiveReaddir(path.join(rootDir, dir),)),
+    []
+  )
   .then((files) => {
     // Filter out any files not matching these extensions
     const filteredFiles = files.filter((file) => {
@@ -24,7 +25,8 @@ const getTrackList = (id, dir) => recursiveReaddir(
 
     // Sort by folder and title
     const sortedFiles = orderBy(filteredFiles.map((file) => {
-      const shortFilePath = file.replace(path.join(config.rootDir, dir, '/'), '');
+      const shortFilePath = config.rootDir.reduce((rootDir, path) => path.replace(path.join(rootDir, dir, '/'), ''), file);
+      
       const dirName = path.dirname(shortFilePath);
 
       return {
@@ -49,11 +51,19 @@ const getTrackList = (id, dir) => recursiveReaddir(
 /**
  * Returns list of directory names (relative) that contain an RJ code.
  */
-async function* getFolderList(current = '', depth = 0) {
-  const folders = await fs.promises.readdir(path.join(config.rootDir, current));
+async function* getFolderList() {
+  for (const rootPath of config.rootDir) {
+    for await (const folder of getFolder(rootPath)) {
+      yield folder;
+    }
+  }
+}
 
+async function* getFolder(rootDir, current = '', depth = 0) {
+  const folders = await fs.promises.readdir(path.join(rootDir, current));
+  
   for (const folder of folders) {
-    const absolutePath = path.resolve(config.rootDir, current, folder);
+    const absolutePath = path.resolve(rootDir, current, folder);
     const relativePath = path.join(current, folder);
 
     // eslint-disable-next-line no-await-in-loop
@@ -63,7 +73,7 @@ async function* getFolderList(current = '', depth = 0) {
         yield relativePath;
       } else if (depth + 1 < config.scannerMaxRecursionDepth) {
         // Found a folder that's not a work folder, go inside if allowed.
-        yield* getFolderList(relativePath, depth + 1);
+        yield* getFolder(rootDir, relativePath, depth + 1);
       }
     }
   }
@@ -74,7 +84,7 @@ async function* getFolderList(current = '', depth = 0) {
  * @param {String} rjcode Work RJ code (only the 6 digits, zero-padded).
  */
 const deleteCoverImageFromDisk = rjcode => new Promise((resolve, reject) => {
-  fs.unlink(path.join(config.rootDir, 'Images', `RJ${rjcode}.jpg`), (err) => {
+  fs.unlink(path.join(config.imageDir, `RJ${rjcode}.jpg`), (err) => {
     if (err) {
       reject(err);
     } else {
@@ -92,7 +102,7 @@ const saveCoverImageToDisk = (stream, rjcode) => new Promise((resolve, reject) =
   // TODO: don't assume image is a jpg?
   try {
     stream.pipe(
-      fs.createWriteStream(path.join(config.rootDir, 'Images', `RJ${rjcode}.jpg`))
+      fs.createWriteStream(path.join(config.imageDir, `RJ${rjcode}.jpg`))
         .on('close', () => resolve()),
     );
   } catch (err) {

@@ -73,7 +73,15 @@ const performCleanup = () => {
     .select('id', 'dir')
     .then((works) => {
       const promises = works.map(work => new Promise((resolve, reject) => {
-        if (!fs.existsSync(path.join(config.rootDir, work.dir))) {
+        let found = false;
+        for(const rootDir in config.rootDir) {
+          const checkPath = fs.existsSync(path.join(rootDir, work.dir));
+          fs.exists(checkPath, (exists) => found = true);
+          if(found) {
+            break;
+          }
+        }
+        if (!found) {
           console.warn(` ! ${work.dir} is missing from filesystem. Removing from database...`);
           db.removeWork(work.id)
             .then((result) => {
@@ -93,7 +101,7 @@ const performCleanup = () => {
 };
 
 const performScan = () => {
-  fs.mkdir(path.join(config.rootDir, 'Images'), (direrr) => {
+  fs.mkdir(config.imageDir, (direrr) => {
     if (direrr && direrr.code !== 'EEXIST') {
       console.error(` ! ERROR while trying to create Images folder: ${direrr.code}`);
       process.exit(1);
