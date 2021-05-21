@@ -3,5 +3,6 @@
   "imageDir": "/mnt/Media/Images",
   "password": false,
   "scannerMaxRecursionDepth": 2,
-  "worksPerPage": 12
+  "worksPerPage": 12,
+  "maxParallelism": 8
 }

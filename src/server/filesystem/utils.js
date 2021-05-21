@@ -20,7 +20,7 @@ const getTrackList = (id, dir) => config.rootDir.reduce(
     const filteredFiles = files.filter((file) => {
       const ext = path.extname(file);
 
-      return (ext === '.mp3' || ext === '.ogg' || ext === '.opus' || ext === '.wav' || ext === '.flac');
+      return (ext === '.mp3' || ext === '.ogg' || ext === '.opus' || ext === '.wav' || ext === '.flac' || ext === '.webm' || ext === '.mp4');
     });
 
     // Sort by folder and title
@@ -110,9 +110,39 @@ const saveCoverImageToDisk = (stream, rjcode) => new Promise((resolve, reject) =
   }
 });
 
+/**
+ * Runs an array of Promise returning functions at a specified rate
+ * @param {Number} the maximum number of unresolved promises that may exist at a given time
+ * @param {Array<Function>} an array of promise-creating functions 
+*/
+const throttlePromises = (maxPending, asyncFuncs) => {
+  return new Promise((resolve, reject) => {
+      let numPending = 0;
+      let nextFuncId = 0;
+      const promisedValues = [];
+      (function check() {
+          if (nextFuncId >= asyncFuncs.length) { // All promises created
+              if (numPending == 0) resolve(promisedValues); // All promises fulfilled
+              return;
+          }
+          while (numPending < maxPending) { // Room for creating promise(s)
+              numPending++;
+              const thisFuncId = nextFuncId++;
+              asyncFuncs[thisFuncId]().then(value => {
+                  promisedValues[thisFuncId] = value;
+                  numPending--;
+                  check();
+              }).catch(reject);
+          }
+      })();
+  });
+};
+
+
 module.exports = {
   getTrackList,
   getFolderList,
   deleteCoverImageFromDisk,
   saveCoverImageToDisk,
+  throttlePromises
 };
